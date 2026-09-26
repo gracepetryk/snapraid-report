@@ -57,9 +57,18 @@ TITLE = "SnapRAID Report"
 # Subject-line icon per level; colors live in templates/report.css.
 LEVEL_ICONS: dict[Level, str] = {"info": "✅", "warning": "⚠️", "error": "❌"}
 STEP_LABELS = {
-    "up": "Spin up", "down": "Spin down", "down_idle": "Spin down", "probe": "Probe",
-    "smart": "SMART", "diff": "Diff", "sync": "Sync", "scrub": "Scrub",
-    "check": "Check", "fix": "Fix", "report": "Report", "touch": "Touch",
+    "up": "Spin up",
+    "down": "Spin down",
+    "down_idle": "Spin down",
+    "probe": "Probe",
+    "smart": "SMART",
+    "diff": "Diff",
+    "sync": "Sync",
+    "scrub": "Scrub",
+    "check": "Check",
+    "fix": "Fix",
+    "report": "Report",
+    "touch": "Touch",
 }
 # Steps only worth a timeline row when they go wrong.
 ROUTINE_STEPS = {"up", "down", "down_idle", "probe", "smart", "report"}
@@ -72,6 +81,7 @@ CHART_HEIGHT_PX = 48
 
 
 # ---------------------------------------------------------------- config
+
 
 @dataclass(frozen=True)
 class Config:
@@ -110,13 +120,14 @@ def load_config(path: str) -> Config:
 
 # ---------------------------------------------------------------- daemon API
 
+
 @dataclass(frozen=True)
 class State:
-    run: list[Task]           # the latest run's tasks, oldest first; empty if none was found
+    run: list[Task]  # the latest run's tasks, oldest first; empty if none was found
     array: Json
     disks: Json
     expected_since: datetime  # a run should have been queued at or after this
-    has_schedule: bool        # expected_since comes from maintenance_schedule, not FALLBACK_WINDOW
+    has_schedule: bool  # expected_since comes from maintenance_schedule, not FALLBACK_WINDOW
 
 
 def api_get(api_url: str, endpoint: str) -> Json:
@@ -165,7 +176,10 @@ def latest_run(history: list[Task]) -> list[Task]:
     interleaved with the run, like background probes and spin-downs, are skipped; an
     earlier run ends the search.
     """
-    start = next((i for i, t in enumerate(history) if t.get("high_command") in RUN_COMMANDS), None)
+    start = next(
+        (i for i, t in enumerate(history) if t.get("high_command") in RUN_COMMANDS),
+        None,
+    )
     if start is None:
         return []
     key = (history[start]["high_command"], history[start].get("scheduled_at"))
@@ -188,8 +202,11 @@ def fetch_state(api_url: str) -> State:
     limit = history_limit(now - since + SCHEDULE_SLACK, daemon_config.get("probe_interval_minutes") or 0)
 
     tasks = api_get(api_url, f"tasks?limit_history={limit}")
-    newest_first = [*reversed(tasks.get("pending") or []), *(tasks.get("active") or []),
-                    *(tasks.get("history") or [])]
+    newest_first = [
+        *reversed(tasks.get("pending") or []),
+        *(tasks.get("active") or []),
+        *(tasks.get("history") or []),
+    ]
     return State(
         run=latest_run(newest_first),
         array=api_get(api_url, "array"),
@@ -200,6 +217,7 @@ def fetch_state(api_url: str) -> State:
 
 
 # ---------------------------------------------------------------- assessing a run
+
 
 def task_ok(task: Task) -> bool:
     return task.get("status") == "terminated" and task.get("exit_code") == 0
@@ -302,6 +320,7 @@ def status_line(report: str) -> str:
 # ---------------------------------------------------------------- formatting
 # Also registered as template filters, so Python and Jinja format values the same way.
 
+
 def fmt_when(moment: datetime) -> str:
     return moment.strftime("%a %b %-d, %-I:%M %p")
 
@@ -336,12 +355,18 @@ def fmt_duration(seconds: float | None) -> str:
     return f"{s}s"
 
 
-FILTERS = {"when": fmt_when, "number": fmt_number, "percent": fmt_percent,
-           "bytes": fmt_bytes, "duration": fmt_duration}
+FILTERS = {
+    "when": fmt_when,
+    "number": fmt_number,
+    "percent": fmt_percent,
+    "bytes": fmt_bytes,
+    "duration": fmt_duration,
+}
 
 
 # ---------------------------------------------------------------- template data
 # Each section of templates/report.html.j2 gets its data from one builder below.
+
 
 def fraction(part: float, whole: float) -> float:
     """part / whole clamped to 0–1; 0 when whole is empty."""
@@ -364,11 +389,15 @@ def run_duration(run: list[Task]) -> float | None:
 
 # ---- header
 
+
 def run_meta(run: list[Task]) -> list[str]:
     """The header's small line for a run: its kind (unless routine), start and duration."""
     started = run_started(run)
     took = "running for" if any(task_unfinished(t) for t in run) else "took"
-    meta = [fmt_when(started) if started else "start unknown", f"{took} {fmt_duration(run_duration(run))}"]
+    meta = [
+        fmt_when(started) if started else "start unknown",
+        f"{took} {fmt_duration(run_duration(run))}",
+    ]
     if run[0]["high_command"] != "maintenance":
         meta.insert(0, run[0]["high_command"].capitalize())
     return meta
@@ -384,6 +413,7 @@ def stale_meta(run: list[Task]) -> list[str]:
 
 
 # ---- stat boxes
+
 
 @dataclass(frozen=True)
 class Tile:
@@ -418,6 +448,7 @@ def run_tiles(run: list[Task], array: Json) -> list[Tile]:
 
 # ---- issues
 
+
 @dataclass(frozen=True)
 class Issue:
     step: str | None
@@ -427,7 +458,7 @@ class Issue:
 @dataclass(frozen=True)
 class Issues:
     shown: list[Issue]  # at most MAX_ISSUES
-    more: int           # how many were left out
+    more: int  # how many were left out
 
 
 def issues_view(run: list[Task], array: Json) -> Issues:
@@ -440,7 +471,12 @@ def issues_view(run: list[Task], array: Json) -> Issues:
             if msg.get("level") in ("fatal", "error"):
                 issues.append(Issue(step, msg["text"]))
     if array.get("blocks_bad"):
-        issues.append(Issue(None, f"{fmt_number(array['blocks_bad'])} bad blocks in the array — run a heal."))
+        issues.append(
+            Issue(
+                None,
+                f"{fmt_number(array['blocks_bad'])} bad blocks in the array — run a heal.",
+            )
+        )
     return Issues(issues[:MAX_ISSUES], max(0, len(issues) - MAX_ISSUES))
 
 
@@ -452,9 +488,9 @@ StepState = Literal["ok", "skipped", "queued", "failed", "running"]
 @dataclass(frozen=True)
 class Step:
     label: str
-    state: StepState    # names the dot color in report.css
-    state_text: str     # shown after the label; empty for steps that finished fine
-    size: int | None    # bytes processed
+    state: StepState  # names the dot color in report.css
+    state_text: str  # shown after the label; empty for steps that finished fine
+    size: int | None  # bytes processed
     seconds: float | None
 
 
@@ -484,17 +520,20 @@ def timeline_view(run: list[Task]) -> list[Step]:
         if task_ok(task) and task["command"] in ROUTINE_STEPS:
             continue
         state, state_text = step_state(task)
-        steps.append(Step(
-            label=step_label(task["command"]),
-            state=state,
-            state_text=state_text,
-            size=task.get("size_done_bytes"),
-            seconds=None if state == "skipped" else task_seconds(task),
-        ))
+        steps.append(
+            Step(
+                label=step_label(task["command"]),
+                state=state,
+                state_text=state_text,
+                size=task.get("size_done_bytes"),
+                seconds=None if state == "skipped" else task_seconds(task),
+            )
+        )
     return steps
 
 
 # ---- changes
+
 
 @dataclass(frozen=True)
 class ChangeCount:
@@ -513,7 +552,7 @@ class ChangeGroup:
 class Changes:
     counts: list[ChangeCount]
     groups: list[ChangeGroup]  # largest first, at most MAX_CHANGE_GROUPS
-    more_groups: int           # how many were left out
+    more_groups: int  # how many were left out
 
 
 def group_diffs(diffs: list[Json]) -> list[ChangeGroup]:
@@ -538,6 +577,7 @@ def changes_view(array: Json) -> Changes | None:
 
 # ---- array
 
+
 @dataclass(frozen=True)
 class ChartDay:
     days_ago: int
@@ -549,7 +589,7 @@ class ChartDay:
 @dataclass(frozen=True)
 class Chart:
     days: list[ChartDay]  # oldest first
-    peak: float           # the busiest day's scrubbed + newly synced share of the array, 0–1
+    peak: float  # the busiest day's scrubbed + newly synced share of the array, 0–1
     height_px: int
 
 
@@ -576,17 +616,22 @@ def chart_view(history: Json) -> Chart | None:
     for ago in range(max(points), -1, -1):
         point = points.get(ago, {})
         scrubbed, new = point.get("scrubbed") or 0, point.get("new") or 0
-        days.append(ChartDay(
-            days_ago=ago,
-            scrubbed_pct=scrubbed,
-            scrub_px=round(scrubbed * scale),
-            new_px=round(new * scale),
-        ))
+        days.append(
+            ChartDay(
+                days_ago=ago,
+                scrubbed_pct=scrubbed,
+                scrub_px=round(scrubbed * scale),
+                new_px=round(new * scale),
+            )
+        )
     return Chart(days, peak_pct / 100, CHART_HEIGHT_PX)
 
 
 def array_view(array: Json) -> ArrayView:
-    total, free = array.get("total_space_bytes") or 0, array.get("free_space_bytes") or 0
+    total, free = (
+        array.get("total_space_bytes") or 0,
+        array.get("free_space_bytes") or 0,
+    )
     blocks = array.get("blocks_count") or 0
     return ArrayView(
         used=total - free,
@@ -602,19 +647,20 @@ def array_view(array: Json) -> ArrayView:
 
 # ---- disks
 
+
 @dataclass(frozen=True)
 class DiskRow:
     name: str
-    role: str                    # data, parity or extra
-    node: str                    # e.g. /dev/sdb
-    drive: str                   # model family, or the model when there's no family
-    model: str | None            # shown under the family
+    role: str  # data, parity or extra
+    node: str  # e.g. /dev/sdb
+    drive: str  # model family, or the model when there's no family
+    model: str | None  # shown under the family
     temp: str
-    temp_class: str              # temp-warm / temp-hot in report.css
+    temp_class: str  # temp-warm / temp-hot in report.css
     used: int | None
     used_fraction: float | None
     size: int | None
-    risk: float | None           # chance of this disk failing within a year
+    risk: float | None  # chance of this disk failing within a year
     health: str
     errors: int
     healthy: bool
@@ -662,9 +708,11 @@ def disk_row(role: str, disk: Json) -> DiskRow:
 
 # ---- whole report
 
+
 @dataclass(frozen=True)
 class Report:
     """Everything templates/report.html.j2 renders."""
+
     title: str
     level: Level
     status: str
@@ -701,8 +749,13 @@ def build_report(state: State, stale: bool, level: Level, status: str, dashboard
 
 # ---------------------------------------------------------------- email
 
+
 def render_html(report: Report) -> str:
-    """Render the report template and inline its stylesheet, as email clients expect."""
+    """Render the report template and inline templates/report.css into it, as email clients expect.
+
+    The stylesheet goes to css-inline directly rather than through a <style> tag in the
+    template; css-inline adds a <style> tag for the @media rules it can't inline.
+    """
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(TEMPLATES),
         autoescape=jinja2.select_autoescape(["html.j2"]),
@@ -713,7 +766,9 @@ def render_html(report: Report) -> str:
     env.filters.update(FILTERS)
     context = {f.name: getattr(report, f.name) for f in fields(report)} | {"tile_width_pct": report.tile_width_pct}
     html = env.get_template("report.html.j2").render(context)
-    return css_inline.CSSInliner(keep_at_rules=True).inline(html)
+    with open(os.path.join(TEMPLATES, "report.css")) as f:
+        css = f.read()
+    return css_inline.CSSInliner(keep_at_rules=True, extra_css=css).inline(html)
 
 
 def build_message(config: Config) -> EmailMessage:
@@ -745,11 +800,15 @@ def send(msg: EmailMessage, sendmail: str) -> int:
     result = subprocess.run([sendmail, "-t", "-oi"], input=msg.as_bytes(), capture_output=True)
     if result.returncode != 0:
         stderr = result.stderr.decode(errors="replace")
-        print(f"snapraid-report: sendmail exited {result.returncode}: {stderr}", file=sys.stderr)
+        print(
+            f"snapraid-report: sendmail exited {result.returncode}: {stderr}",
+            file=sys.stderr,
+        )
     return result.returncode
 
 
 # ---------------------------------------------------------------- main
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])

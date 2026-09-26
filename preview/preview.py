@@ -9,6 +9,7 @@ data, so layout changes can be checked without waiting for a real failure.
     uv run preview/preview.py --no-png   # HTML only
     uv run preview/preview.py --send     # email them, subjects prefixed EXAMPLE
 """
+
 import argparse
 import copy
 import importlib.util
@@ -52,8 +53,13 @@ def ts(min_ago: float) -> str:
 def task(number: int, command: str, started_min_ago: float, finished_min_ago: float | None, **extra: Any) -> Json:
     """A maintenance step queued with the rest of the fake run at QUEUED_MIN_AGO."""
     return {
-        "number": number, "command": command, "high_command": "maintenance", "health": "passed",
-        "status": "terminated", "exit_code": 0, "scheduled_at": ts(QUEUED_MIN_AGO),
+        "number": number,
+        "command": command,
+        "high_command": "maintenance",
+        "health": "passed",
+        "status": "terminated",
+        "exit_code": 0,
+        "scheduled_at": ts(QUEUED_MIN_AGO),
         "started_at": ts(started_min_ago),
         "finished_at": ts(finished_min_ago) if finished_min_ago is not None else None,
         "messages": [],
@@ -71,52 +77,113 @@ def scenarios(live: Json) -> Iterator[Scenario]:
         *({"change": "added", "disk": "d1", "path": f"tv/Andor/Season 02/Andor.S02E{e:02d}.mkv"} for e in range(1, 7)),
         {"change": "updated", "disk": "d3", "path": "docs/notes.txt"},
     ]
-    yield Scenario("info", array=array, disks=live["disks"], history=[
-        task(401, "up", 240, 240),
-        task(402, "sync", 240, 236, size_done_bytes=2_140_000_000),
-        task(403, "scrub", 236, 198, size_done_bytes=485_000_000_000),
-        task(404, "report", 198, 198, report_output="HEALTH:  [passed]\nSTATUS: All nominal\nBAD BLOCKS: 0\n"),
-    ])
+    yield Scenario(
+        "info",
+        array=array,
+        disks=live["disks"],
+        history=[
+            task(401, "up", 240, 240),
+            task(402, "sync", 240, 236, size_done_bytes=2_140_000_000),
+            task(403, "scrub", 236, 198, size_done_bytes=485_000_000_000),
+            task(404, "report", 198, 198, report_output="HEALTH:  [passed]\nSTATUS: All nominal\nBAD BLOCKS: 0\n"),
+        ],
+    )
 
     # Sync aborted by the deletion threshold, scrub skipped.
     array = copy.deepcopy(live["array"])
     array.update(diff_added=212, diff_removed=73, diff_updated=4, diff_moved=18, blocks_unsynced=41822)
     array["diffs"] = [
-        *({"change": "removed", "disk": "d2", "path": f"tv/Severance/Season 01/Severance.S01E{e:02d}.mkv"}
-          for e in range(1, 10)),
-        *({"change": "added", "disk": "d1", "path": f"movies/Dune Part Two (2024)/Dune.Part.Two.{i}.mkv"}
-          for i in range(3)),
+        *(
+            {"change": "removed", "disk": "d2", "path": f"tv/Severance/Season 01/Severance.S01E{e:02d}.mkv"}
+            for e in range(1, 10)
+        ),
+        *(
+            {"change": "added", "disk": "d1", "path": f"movies/Dune Part Two (2024)/Dune.Part.Two.{i}.mkv"}
+            for i in range(3)
+        ),
     ]
-    yield Scenario("warning", array=array, disks=live["disks"], history=[
-        task(101, "up", 240, 240),
-        task(102, "diff", 240, 235),
-        task(103, "sync", 235, 235, status="canceled", exit_code=None,
-             exit_msg="Sync suspended: 73 deleted files reached sync_threshold_deletes (50)."),
-        task(104, "scrub", 235, 235, status="canceled", exit_code=None,
-             exit_msg="Skipped because the previous sync did not complete."),
-    ])
+    yield Scenario(
+        "warning",
+        array=array,
+        disks=live["disks"],
+        history=[
+            task(101, "up", 240, 240),
+            task(102, "diff", 240, 235),
+            task(
+                103,
+                "sync",
+                235,
+                235,
+                status="canceled",
+                exit_code=None,
+                exit_msg="Sync suspended: 73 deleted files reached sync_threshold_deletes (50).",
+            ),
+            task(
+                104,
+                "scrub",
+                235,
+                235,
+                status="canceled",
+                exit_code=None,
+                exit_msg="Skipped because the previous sync did not complete.",
+            ),
+        ],
+    )
 
     # I/O errors on a data disk during sync, silent errors found in scrub.
     array = copy.deepcopy(live["array"])
     array.update(diff_added=38, diff_updated=2, blocks_bad=17, health="prefail")
-    array["diffs"] = [{"change": "added", "disk": "d3", "path": f"music/Chappell Roan/Midwest Princess/{i:02d}.flac"}
-                      for i in range(1, 12)]
+    array["diffs"] = [
+        {"change": "added", "disk": "d3", "path": f"music/Chappell Roan/Midwest Princess/{i:02d}.flac"}
+        for i in range(1, 12)
+    ]
     disks = copy.deepcopy(live["disks"])
     d2 = disk(disks, "d2")
     d2.update(health="prefail", error_io=9, error_data=8)
     d2["devices"][0].update(health="prefail", failure_probability=0.41)
-    yield Scenario("error", array=array, disks=disks, history=[
-        task(201, "up", 240, 240),
-        task(202, "diff", 240, 236),
-        task(203, "sync", 236, 181, health="prefail", exit_code=1, size_done_bytes=48_300_000_000,
-             health_reason="Physical I/O errors on disk d2.",
-             messages=[{"level": "error", "type": "hardware",
-                        "text": "Read error at position 1843021 on disk 'd2' (/dev/sdd): Input/output error"}]),
-        task(204, "scrub", 181, 54, health="corrupt", exit_code=1, size_done_bytes=505_700_000_000,
-             health_reason="8 silent data errors found; run heal.",
-             messages=[{"level": "error", "type": "hardware",
-                        "text": "Data error in file 'd2:tv/The Bear/Season 02/The.Bear.S02E06.mkv' at position 412"}]),
-    ])
+    yield Scenario(
+        "error",
+        array=array,
+        disks=disks,
+        history=[
+            task(201, "up", 240, 240),
+            task(202, "diff", 240, 236),
+            task(
+                203,
+                "sync",
+                236,
+                181,
+                health="prefail",
+                exit_code=1,
+                size_done_bytes=48_300_000_000,
+                health_reason="Physical I/O errors on disk d2.",
+                messages=[
+                    {
+                        "level": "error",
+                        "type": "hardware",
+                        "text": "Read error at position 1843021 on disk 'd2' (/dev/sdd): Input/output error",
+                    }
+                ],
+            ),
+            task(
+                204,
+                "scrub",
+                181,
+                54,
+                health="corrupt",
+                exit_code=1,
+                size_done_bytes=505_700_000_000,
+                health_reason="8 silent data errors found; run heal.",
+                messages=[
+                    {
+                        "level": "error",
+                        "type": "hardware",
+                        "text": "Data error in file 'd2:tv/The Bear/Season 02/The.Bear.S02E06.mkv' at position 412",
+                    }
+                ],
+            ),
+        ],
+    )
 
     # A big sync still going when the report runs.
     yield Scenario(
@@ -124,14 +191,30 @@ def scenarios(live: Json) -> Iterator[Scenario]:
         array=live["array"],
         disks=live["disks"],
         history=[task(501, "up", 240, 240), task(502, "diff", 240, 232)],
-        active=[task(503, "sync", 232, None, status="processing", exit_code=None, health="pending",
-                     progress=62, elapsed_seconds=232 * 60, size_done_bytes=1_310_000_000_000)],
+        active=[
+            task(
+                503,
+                "sync",
+                232,
+                None,
+                status="processing",
+                exit_code=None,
+                health="pending",
+                progress=62,
+                elapsed_seconds=232 * 60,
+                size_done_bytes=1_310_000_000_000,
+            )
+        ],
     )
 
     # The last run was two days ago.
     two_days = 60 * 52
-    yield Scenario("stale", array=live["array"], disks=live["disks"],
-                   history=[task(601, "report", two_days, two_days, scheduled_at=ts(two_days))])
+    yield Scenario(
+        "stale",
+        array=live["array"],
+        disks=live["disks"],
+        history=[task(601, "report", two_days, two_days, scheduled_at=ts(two_days))],
+    )
 
 
 def build(config: Any, daemon_config: Json, scenario: Scenario) -> EmailMessage:

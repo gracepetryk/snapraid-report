@@ -2,176 +2,312 @@
 {% import "macros.html.j2" as ui %}
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light only">
-  <style>{% include "report.css" %}</style>
-</head>
-<body>
-<table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="page-cell">
-<table role="presentation" class="card level-{{ level }}" width="100%" cellpadding="0" cellspacing="0">
-
-  {# ---- header #}
-  <tr><td class="header">
-    <div class="title">{{ title }}</div>
-    <div class="status">{{ status }}</div>
-    <div class="meta">{{ meta | join(" · ") }}</div>
-  </td></tr>
-
-  {# ---- stat boxes #}
-  <tr><td class="tiles-cell">
-    <table role="presentation" class="tiles" width="100%" cellpadding="0" cellspacing="8"><tr>
-    {% for tile in tiles %}
-      <td class="tile" width="{{ tile_width_pct }}%">
-        <div class="tile-value">{{ tile.value }}</div>
-        <div class="tile-label">{{ tile.label }}</div>
-      </td>
-    {% endfor %}
-    </tr></table>
-  </td></tr>
-
-  {# ---- issues #}
-  {% if issues and issues.shown %}
-  <tr><td class="issues-cell"><div class="issues">
-    <ul class="issues-list">
-    {% for issue in issues.shown %}
-      <li class="issues-item">{% if issue.step %}<b>{{ issue.step }}:</b> {% endif %}{{ issue.text }}</li>
-    {% endfor %}
-    {% if issues.more %}
-      <li class="issues-more">…and {{ issues.more | number }} more</li>
-    {% endif %}
-    </ul>
-  </div></td></tr>
-  {% endif %}
-
-  {# ---- timeline #}
-  {% if timeline %}
-  {% call ui.section("Timeline") %}
-    <table role="presentation" class="timeline" width="100%" cellpadding="0" cellspacing="0">
-    {% for step in timeline %}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light only" />
+  </head>
+  <body>
+    <table
+      role="presentation"
+      class="page"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+    >
       <tr>
-        <td class="timeline-cell timeline-dot"><div class="dot dot-{{ step.state }}"></div></td>
-        <td class="timeline-cell timeline-step">
-          {{ step.label }}{% if step.state_text %}<span class="timeline-state">&nbsp; {{ step.state_text }}</span>{% endif %}
+        <td align="center" class="page-cell">
+          <table
+            role="presentation"
+            class="card level-{{ level }}"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+          >
+            {# ---- header #}
+            <tr>
+              <td class="header">
+                <div class="title">{{ title }}</div>
+                <div class="status">{{ status }}</div>
+                <div class="meta">{{ meta | join(" · ") }}</div>
+              </td>
+
+              {# ---- stat boxes #}
+            </tr>
+
+            <tr>
+              <td class="tiles-cell">
+                <table
+                  role="presentation"
+                  class="tiles"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="8"
+                >
+                  <tr>
+                    {% for tile in tiles %}
+                      <td class="tile" width="{{ tile_width_pct }}%">
+                        <div class="tile-value">{{ tile.value }}</div>
+                        <div class="tile-label">{{ tile.label }}</div>
+                      </td>
+                    {% endfor %}
+                  </tr>
+                </table>
+              </td>
+
+              {# ---- issues #}
+              {% if issues and issues.shown %}
+                <tr>
+                  <td class="issues-cell">
+                    <div class="issues">
+                      <ul class="issues-list">
+                        {% for issue in issues.shown %}
+                          <li class="issues-item">
+                            {% if issue.step %}
+                              <b>{{ issue.step }}:</b>
+                            {% endif %}{{ issue.text }}
+                          </li>
+                        {% endfor %}
+                        {% if issues.more %}
+                          <li class="issues-more">
+                            …and {{ issues.more | number }} more
+                          </li>
+                        {% endif %}
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+
+              {# ---- timeline #}
+              {% if timeline %}
+                {% call ui.section("Timeline") %}
+                  <table
+                    role="presentation"
+                    class="timeline"
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                  >
+                    {% for step in timeline %}
+                      <tr>
+                        <td class="timeline-cell timeline-dot">
+                          <div class="dot dot-{{ step.state }}"></div>
+                        </td>
+                        <td class="timeline-cell timeline-step">
+                          {{ step.label }}{% if step.state_text %}
+                            <span class="timeline-state"
+                              >&nbsp; {{ step.state_text }}</span
+                            >
+                          {% endif %}
+                        </td>
+                        <td class="timeline-cell timeline-size">
+                          {{ step.size | bytes if step.size else "" }}
+                        </td>
+                        <td class="timeline-cell timeline-time">
+                          {{ step.seconds | duration }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </table>
+                {% endcall %}
+              {% endif %}
+
+              {# ---- changes #}
+              {% if changes %}
+                {% call ui.section("Changes") %}
+                  <div class="changes-chips">
+                    {% for c in changes.counts %}{{ ui.pill((c.count | number) ~ " " ~ c.kind, "pill-change") }}{% endfor %}
+                  </div>
+                  {% if changes.groups %}
+                    <table
+                      role="presentation"
+                      class="changes"
+                      width="100%"
+                      cellpadding="0"
+                      cellspacing="0"
+                    >
+                      {% for group in changes.groups %}
+                        <tr>
+                          <td class="changes-cell changes-folder">
+                            {{ group.folder }}
+                          </td>
+                          <td class="changes-cell changes-count">
+                            {{ group.count | number }} {{ group.change }}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                      {% if changes.more_groups %}
+                        <tr>
+                          <td colspan="2" class="changes-more">
+                            …and {{ changes.more_groups | number }} more folders
+                          </td>
+                        </tr>
+                      {% endif %}
+                    </table>
+                  {% endif %}
+                {% endcall %}
+              {% endif %}
+
+              {# ---- array #}
+              {% call ui.section("Array") %}
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                >
+                  <tr>
+                    <td class="array-label">Capacity</td>
+                    <td class="array-bar" width="100%">
+                      {{ ui.bar(array.used_fraction, "bar-capacity") }}
+                    </td>
+                    <td class="array-value">
+                      {{ array.used | bytes }} / {{ array.total | bytes }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="array-label">Scrub coverage</td>
+                    <td class="array-bar" width="100%">
+                      {{ ui.bar(array.scrub_fraction, "bar-scrub") }}
+                    </td>
+                    <td class="array-value">
+                      {{ array.scrub_fraction | percent(1) }}
+                    </td>
+                  </tr>
+                </table>
+                <div class="array-facts">
+                  {{ array.files | number }} files · {{ array.data_disks }} data
+                  + {{ array.parity_disks }} parity disks
+                </div>
+
+                {% set chart = array.chart %}
+                {% if chart %}
+                  <div class="chart-title">
+                    Scrubbed per day
+                    <span class="muted">
+                      · % of array, last {{ chart.days | length }} days
+                      {{- ", peak " ~ chart.peak | percent(1) if chart.peak else "" }}
+                    </span>
+                  </div>
+                  <div class="chart-legend">
+                    <span class="chart-key-scrub">■</span> verified &nbsp;<span
+                      class="chart-key-new"
+                      >■</span
+                    >
+                    newly synced
+                  </div>
+                  <table
+                    role="presentation"
+                    class="chart"
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                  >
+                    <tr>
+                      {% for day in chart.days %}
+                        <td
+                          class="chart-col"
+                          style="height: {{ chart.height_px }}px"
+                          title="{{ day.days_ago }}d ago: {{ day.scrubbed_pct }}% scrubbed"
+                        >
+                          <div
+                            class="chart-new"
+                            style="height: {{ day.new_px }}px"
+                          ></div>
+                          <div
+                            class="chart-scrub"
+                            style="height: {{ day.scrub_px }}px"
+                          ></div>
+                        </td>
+                      {% endfor %}
+                    </tr>
+                  </table>
+                {% endif %}
+              {% endcall %}
+
+              {# ---- disks #}
+              {% call ui.section("Disks") %}
+                <table
+                  role="presentation"
+                  class="disks"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                >
+                  <tr>
+                    <th class="disks-head" align="left">Disk</th>
+                    <th class="disks-head" align="left">Drive</th>
+                    <th class="disks-head" align="right">Temp</th>
+                    <th class="disks-head hide-sm" align="left">Used</th>
+                    <th class="disks-head hide-sm" align="right">Fail risk</th>
+                  </tr>
+                  {% for disk in disks %}
+                    <tr class="{{ '' if disk.healthy else 'row-alert' }}">
+                      <td class="disks-cell">
+                        <div class="disk-name">{{ disk.name }}</div>
+                        <div class="disk-where">
+                          {{ disk.role }} · {{ disk.node }}
+                        </div>
+                      </td>
+                      <td class="disks-cell">
+                        <div class="disk-drive">{{ disk.drive }}</div>
+                        {% if disk.model %}
+                          <div class="disk-model hide-sm">{{ disk.model }}</div>
+                        {% endif %}
+                        {% if not disk.healthy %}
+                          <div class="disk-flags">
+                            {{ ui.pill(disk.health, "pill-" ~ disk.health) }}
+                            {% if disk.errors %}
+                              &nbsp;<span class="disk-errors"
+                                >{{ disk.errors | number }} errors</span
+                              >
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      </td>
+                      <td class="disks-cell" align="right">
+                        <span class="disk-temp {{ disk.temp_class }}"
+                          >{{ disk.temp }}</span
+                        >
+                      </td>
+                      <td class="disks-cell hide-sm">
+                        {% if disk.used_fraction is not none %}{{ ui.bar(disk.used_fraction, "bar-capacity", width=90) }}{% endif %}
+                        {% if disk.size %}
+                          <div class="disk-capacity">
+                            {% if disk.used is not none %}
+                              {{ disk.used | bytes }}
+                              / {{ disk.size | bytes }}
+                            {% else %}
+                              {{ disk.size | bytes }}
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      </td>
+                      <td class="disks-cell hide-sm" align="right">
+                        <span class="disk-risk"
+                          >{% if disk.risk is not none %}{{ disk.risk | percent }}/yr{% endif %}</span
+                        >
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </table>
+              {% endcall %}
+
+              {# ---- footer #}
+              {% if dashboard_url %}
+                <tr>
+                  <td class="footer">
+                    <a class="button" href="{{ dashboard_url }}"
+                      >Open SnapRAID dashboard</a
+                    >
+                  </td>
+                </tr>
+              {% endif %}
+            </tr>
+          </table>
         </td>
-        <td class="timeline-cell timeline-size">{{ step.size | bytes if step.size else "" }}</td>
-        <td class="timeline-cell timeline-time">{{ step.seconds | duration }}</td>
       </tr>
-    {% endfor %}
     </table>
-  {% endcall %}
-  {% endif %}
-
-  {# ---- changes #}
-  {% if changes %}
-  {% call ui.section("Changes") %}
-    <div class="changes-chips">
-    {% for c in changes.counts %}{{ ui.pill((c.count | number) ~ " " ~ c.kind, "pill-change") }} {% endfor %}
-    </div>
-    {% if changes.groups %}
-    <table role="presentation" class="changes" width="100%" cellpadding="0" cellspacing="0">
-    {% for group in changes.groups %}
-      <tr>
-        <td class="changes-cell changes-folder">{{ group.folder }}</td>
-        <td class="changes-cell changes-count">{{ group.count | number }} {{ group.change }}</td>
-      </tr>
-    {% endfor %}
-    {% if changes.more_groups %}
-      <tr><td colspan="2" class="changes-more">…and {{ changes.more_groups | number }} more folders</td></tr>
-    {% endif %}
-    </table>
-    {% endif %}
-  {% endcall %}
-  {% endif %}
-
-  {# ---- array #}
-  {% call ui.section("Array") %}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td class="array-label">Capacity</td>
-        <td class="array-bar" width="100%">{{ ui.bar(array.used_fraction, "bar-capacity") }}</td>
-        <td class="array-value">{{ array.used | bytes }} / {{ array.total | bytes }}</td>
-      </tr>
-      <tr>
-        <td class="array-label">Scrub coverage</td>
-        <td class="array-bar" width="100%">{{ ui.bar(array.scrub_fraction, "bar-scrub") }}</td>
-        <td class="array-value">{{ array.scrub_fraction | percent(1) }}</td>
-      </tr>
-    </table>
-    <div class="array-facts">
-      {{ array.files | number }} files · {{ array.data_disks }} data + {{ array.parity_disks }} parity disks
-    </div>
-
-    {% set chart = array.chart %}
-    {% if chart %}
-    <div class="chart-title">
-      Scrubbed per day
-      <span class="muted">
-        · % of array, last {{ chart.days | length }} days{% if chart.peak %}, peak {{ chart.peak | percent(1) }}{% endif %}
-      </span>
-    </div>
-    <div class="chart-legend">
-      <span class="chart-key-scrub">■</span> verified &nbsp;<span class="chart-key-new">■</span> newly synced
-    </div>
-    <table role="presentation" class="chart" width="100%" cellpadding="0" cellspacing="0"><tr>
-    {% for day in chart.days %}
-      <td class="chart-col" style="height: {{ chart.height_px }}px" title="{{ day.days_ago }}d ago: {{ day.scrubbed_pct }}% scrubbed">
-        <div class="chart-new" style="height: {{ day.new_px }}px"></div>
-        <div class="chart-scrub" style="height: {{ day.scrub_px }}px"></div>
-      </td>
-    {% endfor %}
-    </tr></table>
-    {% endif %}
-  {% endcall %}
-
-  {# ---- disks #}
-  {% call ui.section("Disks") %}
-    <table role="presentation" class="disks" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <th class="disks-head" align="left">Disk</th>
-        <th class="disks-head" align="left">Drive</th>
-        <th class="disks-head" align="right">Temp</th>
-        <th class="disks-head hide-sm" align="left">Used</th>
-        <th class="disks-head hide-sm" align="right">Fail risk</th>
-      </tr>
-    {% for disk in disks %}
-      <tr{% if not disk.healthy %} class="row-alert"{% endif %}>
-        <td class="disks-cell">
-          <div class="disk-name">{{ disk.name }}</div>
-          <div class="disk-where">{{ disk.role }} · {{ disk.node }}</div>
-        </td>
-        <td class="disks-cell">
-          <div class="disk-drive">{{ disk.drive }}</div>
-          {% if disk.model %}<div class="disk-model hide-sm">{{ disk.model }}</div>{% endif %}
-          {% if not disk.healthy %}
-          <div class="disk-flags">
-            {{ ui.pill(disk.health, "pill-" ~ disk.health) }}
-            {% if disk.errors %}&nbsp;<span class="disk-errors">{{ disk.errors | number }} errors</span>{% endif %}
-          </div>
-          {% endif %}
-        </td>
-        <td class="disks-cell" align="right"><span class="disk-temp {{ disk.temp_class }}">{{ disk.temp }}</span></td>
-        <td class="disks-cell hide-sm">
-          {% if disk.used_fraction is not none %}{{ ui.bar(disk.used_fraction, "bar-capacity", width=90) }}{% endif %}
-          {% if disk.size %}
-          <div class="disk-capacity">{% if disk.used is not none %}{{ disk.used | bytes }} / {% endif %}{{ disk.size | bytes }}</div>
-          {% endif %}
-        </td>
-        <td class="disks-cell hide-sm" align="right">
-          <span class="disk-risk">{% if disk.risk is not none %}{{ disk.risk | percent }}/yr{% endif %}</span>
-        </td>
-      </tr>
-    {% endfor %}
-    </table>
-  {% endcall %}
-
-  {# ---- footer #}
-  {% if dashboard_url %}
-  <tr><td class="footer"><a class="button" href="{{ dashboard_url }}">Open SnapRAID dashboard</a></td></tr>
-  {% endif %}
-
-</table>
-</td></tr></table>
-</body>
+  </body>
 </html>

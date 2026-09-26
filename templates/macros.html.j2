@@ -1,20 +1,35 @@
 {# Building blocks shared by report.html.j2. Email clients need table layouts, so these hide the table plumbing. #}
 
 {% macro section(title) -%}
-<tr><td class="section">
-  <div class="section-title">{{ title }}</div>
-  {{ caller() }}
-</td></tr>
+  <tr>
+    <td class="section">
+      <div class="section-title">{{ title }}</div>
+      {{ caller() }}
+    </td>
+  </tr>
 {%- endmacro %}
 
 {# A horizontal bar; `fraction` is 0–1 and `kind` picks the fill color (bar-capacity, bar-scrub). #}
 {% macro bar(fraction, kind, width="100%") -%}
-<table role="presentation" class="bar" width="{{ width }}" cellpadding="0" cellspacing="0"><tr>
-  <td class="bar-fill {{ kind }}" style="width: {{ fraction | percent(1) }}">&nbsp;</td>
-  <td class="bar-rest">&nbsp;</td>
-</tr></table>
+  <table
+    role="presentation"
+    class="bar"
+    width="{{ width }}"
+    cellpadding="0"
+    cellspacing="0"
+  >
+    <tr>
+      <td
+        class="bar-fill {{ kind }}"
+        style="width: {{ fraction | percent(1) }}"
+      >
+        &nbsp;
+      </td>
+      <td class="bar-rest">&nbsp;</td>
+    </tr>
+  </table>
 {%- endmacro %}
 
 {% macro pill(text, kind) -%}
-<span class="pill {{ kind }}">{{ text }}</span>
+  <span class="pill {{ kind }}">{{ text }}</span>
 {%- endmacro %}
