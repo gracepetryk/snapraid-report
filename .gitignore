@@ -1,0 +1,4 @@
+__pycache__/
+snapraid-report.conf
+preview/out/
+.venv/

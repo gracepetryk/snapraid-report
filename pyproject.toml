@@ -1,0 +1,27 @@
+[project]
+name = "snapraid-report"
+version = "0.1.0"
+description = "Daily HTML email summarising the latest snapraid-daemon run"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "css-inline>=0.14",  # inlines templates/report.css; email clients ignore most <style> rules
+    "jinja2>=3.1",
+]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.40",  # screenshots in preview/preview.py
+    "ruff>=0.5",
+    "ty",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, bugbear, pyupgrade, simplify, import order
+select = ["E", "W", "F", "B", "UP", "SIM", "I"]

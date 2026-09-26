@@ -1,0 +1,16 @@
+# snapraid-report configuration.
+# Copy to snapraid-report.conf (next to snapraid-report.py) and fill in.
+
+[mail]
+# Where the report goes. Required.
+to = you@example.com
+# Sender address. Required.
+from = snapraid@example.com
+# sendmail-compatible binary used for delivery.
+#sendmail = /usr/sbin/sendmail
+
+[daemon]
+# snapraidd REST API base URL.
+#api_url = http://127.0.0.1:7627/snapraid/v1
+# Linked from a button at the bottom of the email; leave unset for no button.
+#dashboard_url = https://snapraid.example.com
