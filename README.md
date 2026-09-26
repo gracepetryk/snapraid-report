@@ -13,6 +13,23 @@ The report is built from the daemon's REST API and covers:
 
 The email's level (✅ / ⚠️ / ❌) comes from the run's results. A run that's still going, a missed run (none since the daemon's last `maintenance_schedule` time, or in the last 24 hours without a schedule), an unreachable daemon, and a report that fails to build are all reported too.
 
+## Screenshots
+
+<table>
+  <tr>
+    <th>All good</th>
+    <th>Errors</th>
+    <th>Warning, on a phone</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/report-ok.png" alt="A green report: all nominal, with sync and scrub stats, changed folders, array capacity, scrub history and a disk table"></td>
+    <td valign="top"><img src="docs/report-error.png" alt="A red report: I/O errors on disk d2, listing the failed sync and scrub steps and flagging d2 as prefail"></td>
+    <td valign="top"><img src="docs/report-warning-phone.png" alt="An amber report at phone width: the sync was suspended after too many deleted files, so sync and scrub were skipped"></td>
+  </tr>
+</table>
+
+The screenshots come from `preview/preview.py`, which uses real array and disk data with made-up runs.
+
 ## Requirements
 
 - `snapraidd` with its REST API enabled (`net_enabled = 1` in `/etc/snapraidd.conf`)
@@ -52,6 +69,8 @@ uv run preview/preview.py            # HTML + desktop/phone screenshots in previ
 uv run preview/preview.py --no-png   # HTML only
 uv run preview/preview.py --send     # email them, subjects prefixed EXAMPLE
 ```
+
+The README's screenshots in `docs/` are copies of `info-desktop.png`, `error-desktop.png` and `warning-phone.png` from a preview run.
 
 Screenshots use Playwright (a dev dependency) and its headless Chromium: `uv run playwright install --only-shell chromium`. On a minimal server it may also need a few shared libraries (ATK, AT-SPI, Xcomposite, Xdamage) and `fonts-noto-color-emoji` for the subject icons.
 
